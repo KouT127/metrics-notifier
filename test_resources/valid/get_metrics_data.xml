@@ -1,0 +1,31 @@
+<GetMetricStatisticsResponse>
+    <GetMetricStatisticsResult>
+        <Datapoints>
+            <member>
+                <TargetName>example-server</TargetName>
+                <Timestamp>2014-04-09T18:00:00Z</Timestamp>
+                <Average>52.8</Average>
+                <Maximum>99.0</Maximum>
+                <Minimum>12.0</Minimum>
+            </member>
+            <member>
+                <TargetName>example-server</TargetName>
+                <Timestamp>2014-04-09T19:00:00Z</Timestamp>
+                <Average>51.8</Average>
+                <Maximum>98.0</Maximum>
+                <Minimum>11.0</Minimum>
+            </member>
+            <member>
+                <TargetName>example-server</TargetName>
+                <Timestamp>2014-04-09T20:00:00Z</Timestamp>
+                <Average>50.8</Average>
+                <Maximum>97.0</Maximum>
+                <Minimum>10.0</Minimum>
+            </member>
+        </Datapoints>
+        <Label>CPUUtilization</Label>
+    </GetMetricStatisticsResult>
+    <ResponseMetadata>
+        <RequestId>f22f7e78-4c17-4d1b-96f4-3aa8f145eacb</RequestId>
+    </ResponseMetadata>
+</GetMetricStatisticsResponse>
