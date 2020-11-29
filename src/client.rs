@@ -136,6 +136,24 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_aggregate_metrics_error() {
+        let mock = CloudWatchClient::new_with(
+            MockRequestDispatcher::with_status(400).with_body(&*MockResponseReader::read_response(
+                "test_resources/error",
+                "get_metrics_data.xml",
+            )),
+            MockCredentialsProvider,
+            Default::default(),
+        );
+
+        let client = MetricsClient::new_with_client(mock);
+        let result = client.aggregate_metrics().await;
+
+        assert!(result.is_err());
+        dbg!(result.err());
+    }
+
+    #[tokio::test]
     async fn test_aggregate_data_points() {
         let client = MetricsClient::new_with_client(CloudWatchClient::new(Region::ApNortheast3));
         let result = client.aggregate_data_points(Some(vec![
