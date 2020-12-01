@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
 use rusoto_cloudwatch::{CloudWatch, CloudWatchClient, Datapoint, GetMetricStatisticsInput};
 
-use crate::error::MetricsClientError::GetMetricsError;
+use std::convert::TryFrom;
 use std::ops::{Add, Div};
 
 const DEFAULT_STATISTICS: [&'static str; 3] = ["Average", "Minimum", "Maximum"];
@@ -75,7 +75,8 @@ impl MetricsClient {
         let mut total = BigDecimal::from(0);
         let mut minimum = 100.0f64;
         let mut maximum = 0.0f64;
-        let count = BigDecimal::from(data_points.len() as i32);
+        let length = u32::try_from(data_points.len())?;
+        let count = BigDecimal::from(length);
         for data_point in data_points {
             let average = data_point
                 .average
@@ -150,7 +151,6 @@ mod tests {
         let result = client.aggregate_metrics().await;
 
         assert!(result.is_err());
-        dbg!(result.err());
     }
 
     #[tokio::test]

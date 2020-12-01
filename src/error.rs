@@ -1,17 +1,16 @@
 use std::error::Error;
 
-use serde::{Deserialize, Serialize};
-
-use bigdecimal::BigDecimal;
 use rusoto_cloudwatch::GetMetricStatisticsError;
 use rusoto_core::RusotoError;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
+use std::num::TryFromIntError;
 
 #[derive(Debug, PartialEq)]
 pub enum MetricsClientError {
     NoneValue,
     ToPrimitive,
+    TryFromIntError,
     GetMetricsError(RusotoError<GetMetricStatisticsError>),
 }
 
@@ -22,6 +21,7 @@ impl Display for MetricsClientError {
             MetricsClientError::ToPrimitive => {
                 write!(f, "Failed to convert bigDecimal to primitive")
             }
+            MetricsClientError::TryFromIntError => write!(f, "Failed to convert int"),
             MetricsClientError::GetMetricsError(ref error) => std::fmt::Display::fmt(error, f),
         }
     }
@@ -33,6 +33,12 @@ impl Error for MetricsClientError {
             MetricsClientError::GetMetricsError(ref error) => Some(error),
             _ => None,
         }
+    }
+}
+
+impl From<TryFromIntError> for MetricsClientError {
+    fn from(_: TryFromIntError) -> MetricsClientError {
+        MetricsClientError::TryFromIntError
     }
 }
 

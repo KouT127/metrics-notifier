@@ -2,9 +2,6 @@ mod client;
 mod error;
 
 use lambda::{handler_fn, Context};
-use rusoto_cloudwatch::{CloudWatch, CloudWatchClient, GetMetricStatisticsInput};
-use rusoto_core::Region;
-use rusoto_ec2::Ec2Client;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
