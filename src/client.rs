@@ -4,10 +4,44 @@ use async_trait::async_trait;
 use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
 use rusoto_cloudwatch::{CloudWatch, CloudWatchClient, Datapoint, GetMetricStatisticsInput};
 
+use chrono::{DateTime, Datelike, FixedOffset, Local, NaiveDateTime, TimeZone, Utc};
 use std::convert::TryFrom;
 use std::ops::{Add, Div};
 
 const DEFAULT_STATISTICS: [&'static str; 3] = ["Average", "Minimum", "Maximum"];
+
+struct TimeRange {
+    pub start: chrono::DateTime<Utc>,
+    pub end: chrono::DateTime<Utc>,
+}
+
+impl TimeRange {
+    fn current_month_range(datetime: DateTime<Utc>) -> Self {
+        use chrono::TimeZone;
+        use chrono_tz::Asia::Tokyo;
+        use chrono_tz::Tz;
+
+        let tokyo = FixedOffset::east(9 * 3600);
+
+        let now: DateTime<FixedOffset> = datetime.with_timezone(&tokyo);
+        let start = tokyo
+            .from_local_datetime(
+                &chrono::NaiveDate::from_ymd(now.year(), now.month(), 0).and_hms(0, 0, 0),
+            )
+            .unwrap();
+        let end = tokyo
+            .from_local_datetime(
+                &chrono::NaiveDate::from_ymd(now.year(), now.month(), now.day())
+                    .and_hms(23, 59, 59),
+            )
+            .unwrap();
+
+        TimeRange {
+            start: start.with_timezone(&Utc),
+            end: end.with_timezone(&Utc),
+        }
+    }
+}
 
 #[derive(Debug, PartialEq)]
 pub struct AggregatedMetrics {
