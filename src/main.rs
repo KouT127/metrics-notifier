@@ -1,4 +1,4 @@
-mod client;
+mod cloud_watch_metrics_client;
 mod error;
 mod time_range;
 mod metric;

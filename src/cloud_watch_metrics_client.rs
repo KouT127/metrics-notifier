@@ -7,27 +7,27 @@ use rusoto_cloudwatch::{CloudWatch, CloudWatchClient, Datapoint, GetMetricStatis
 use std::convert::TryFrom;
 use std::ops::{Add, Div};
 use crate::metric::AggregatedMetrics;
+use crate::time_range::TimeRange;
 
 const DEFAULT_STATISTICS: [&'static str; 3] = ["Average", "Minimum", "Maximum"];
 
-
-pub struct MetricsClient {
+pub struct CloudWatchMetricsClient {
     client: CloudWatchClient,
 }
 
 #[async_trait]
 pub trait Aggregate {
-    async fn aggregate_metrics(self) -> Result<AggregatedMetrics, MetricsClientError>;
+    async fn aggregate_metrics(&self, time_range: &TimeRange) -> Result<AggregatedMetrics, MetricsClientError>;
 }
 
 #[async_trait]
-impl Aggregate for MetricsClient {
-    async fn aggregate_metrics(self) -> Result<AggregatedMetrics, MetricsClientError> {
+impl Aggregate for CloudWatchMetricsClient {
+    async fn aggregate_metrics(&self, time_range: &TimeRange) -> Result<AggregatedMetrics, MetricsClientError> {
         let metrics = self
             .client
             .get_metric_statistics(GetMetricStatisticsInput {
-                start_time: "".to_string(),
-                end_time: "".to_string(),
+                start_time: time_range.start.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+                end_time: time_range.end.format("%Y-%m-%dT%H:%M:%SZ").to_string(),
                 metric_name: "CPUUtilization".to_string(),
                 namespace: "AWS/EC2".to_string(),
                 period: 0,
@@ -44,13 +44,13 @@ impl Aggregate for MetricsClient {
     }
 }
 
-impl MetricsClient {
+impl CloudWatchMetricsClient {
     fn new_with_client(client: CloudWatchClient) -> Self {
-        MetricsClient { client }
+        CloudWatchMetricsClient { client }
     }
 
     fn aggregate_data_points(
-        self,
+        &self,
         data_points: Option<Vec<Datapoint>>,
     ) -> Result<AggregatedMetrics, MetricsClientError> {
         let data_points = data_points.map_or(vec![], |points| points);
@@ -89,13 +89,17 @@ impl MetricsClient {
 
 #[cfg(test)]
 mod tests {
-    use crate::client::{Aggregate, AggregatedMetrics, MetricsClient};
+    use crate::cloud_watch_metrics_client::{Aggregate, AggregatedMetrics, CloudWatchMetricsClient};
     use crate::error::MetricsClientError;
     use rusoto_cloudwatch::{CloudWatchClient, Datapoint};
     use rusoto_core::Region;
     use rusoto_mock::{
         MockCredentialsProvider, MockRequestDispatcher, MockResponseReader, ReadMockResponse,
     };
+    use crate::time_range::TimeRange;
+    use chrono::{DateTime, Utc};
+    use std::str::FromStr;
+    use std::convert::TryFrom;
 
 
     #[tokio::test]
@@ -109,8 +113,10 @@ mod tests {
             Default::default(),
         );
 
-        let client = MetricsClient::new_with_client(mock);
-        let result = client.aggregate_metrics().await;
+        let beginning_of_month = DateTime::<Utc>::from_str("2019-01-12T00:00:00.0+00:00").unwrap();
+        let range = TimeRange::try_from(beginning_of_month).unwrap();
+        let client = CloudWatchMetricsClient::new_with_client(mock);
+        let result = client.aggregate_metrics(&range).await;
 
         assert_eq!(
             result.unwrap(),
@@ -133,15 +139,17 @@ mod tests {
             Default::default(),
         );
 
-        let client = MetricsClient::new_with_client(mock);
-        let result = client.aggregate_metrics().await;
+        let beginning_of_month = DateTime::<Utc>::from_str("2019-01-12T00:00:00.0+00:00").unwrap();
+        let range = TimeRange::try_from(beginning_of_month).unwrap();
+        let client = CloudWatchMetricsClient::new_with_client(mock);
+        let result = client.aggregate_metrics(&range).await;
 
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_aggregate_data_points() {
-        let client = MetricsClient::new_with_client(CloudWatchClient::new(Region::ApNortheast3));
+        let client = CloudWatchMetricsClient::new_with_client(CloudWatchClient::new(Region::ApNortheast3));
         let result = client.aggregate_data_points(Some(vec![
             Datapoint {
                 average: Some(55.5),
@@ -196,7 +204,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_aggregate_when_zero_value() {
-        let client = MetricsClient::new_with_client(CloudWatchClient::new(Region::ApNortheast3));
+        let client = CloudWatchMetricsClient::new_with_client(CloudWatchClient::new(Region::ApNortheast3));
         let result = client.aggregate_data_points(Some(vec![]));
         assert_eq!(
             AggregatedMetrics {
@@ -210,7 +218,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_dont_aggregate_when_no_value() {
-        let client = MetricsClient::new_with_client(CloudWatchClient::new(Region::ApNortheast3));
+        let client = CloudWatchMetricsClient::new_with_client(CloudWatchClient::new(Region::ApNortheast3));
         let result = client.aggregate_data_points(Some(vec![Datapoint {
             average: None,
             maximum: None,
