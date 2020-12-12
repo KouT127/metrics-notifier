@@ -1,5 +1,7 @@
 mod client;
 mod error;
+mod time_range;
+mod metric;
 
 use lambda::{handler_fn, Context};
 

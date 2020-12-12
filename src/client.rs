@@ -4,75 +4,12 @@ use async_trait::async_trait;
 use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
 use rusoto_cloudwatch::{CloudWatch, CloudWatchClient, Datapoint, GetMetricStatisticsInput};
 
-use chrono::{DateTime, Datelike, FixedOffset, Local, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use std::convert::TryFrom;
 use std::ops::{Add, Div};
+use crate::metric::AggregatedMetrics;
 
 const DEFAULT_STATISTICS: [&'static str; 3] = ["Average", "Minimum", "Maximum"];
 
-#[derive(Debug, PartialEq)]
-struct TimeRange {
-    pub start: chrono::DateTime<Utc>,
-    pub end: chrono::DateTime<Utc>,
-}
-
-impl TryFrom<DateTime<Utc>> for TimeRange {
-    type Error = MetricsClientError;
-
-    fn try_from(date_time: DateTime<Utc>) -> Result<Self, Self::Error> {
-        let tokyo = FixedOffset::east(9 * 3600);
-        let now: DateTime<FixedOffset> = date_time.with_timezone(&tokyo);
-        let start = tokyo
-            .from_local_datetime(
-                &chrono::NaiveDate::from_ymd(now.year(), now.month(), 1).and_hms(0, 0, 0),
-            )
-            .single()
-            .ok_or_else(|| MetricsClientError::NoneValue)?;
-
-        let end = tokyo
-            .from_local_datetime(
-                &chrono::NaiveDate::from_ymd(
-                    now.year(),
-                    now.month(),
-                    Self::last_day_of_month(now.year(), now.month()),
-                )
-                .and_hms(23, 59, 59),
-            )
-            .single()
-            .ok_or_else(|| MetricsClientError::NoneValue)?;
-
-        Ok(TimeRange {
-            start: start.with_timezone(&Utc),
-            end: end.with_timezone(&Utc),
-        })
-    }
-}
-
-impl TimeRange {
-    fn last_day_of_month(year: i32, month: u32) -> u32 {
-        NaiveDate::from_ymd_opt(year, month + 1, 1)
-            .unwrap_or(NaiveDate::from_ymd(year + 1, 1, 1))
-            .pred()
-            .day()
-    }
-}
-
-#[derive(Debug, PartialEq)]
-pub struct AggregatedMetrics {
-    pub average: f64,
-    pub maximum: f64,
-    pub minimum: f64,
-}
-
-impl Default for AggregatedMetrics {
-    fn default() -> Self {
-        Self {
-            average: 0.0,
-            maximum: 0.0,
-            minimum: 0.0,
-        }
-    }
-}
 
 pub struct MetricsClient {
     client: CloudWatchClient,
@@ -152,37 +89,14 @@ impl MetricsClient {
 
 #[cfg(test)]
 mod tests {
-    use crate::client::{Aggregate, AggregatedMetrics, MetricsClient, TimeRange};
+    use crate::client::{Aggregate, AggregatedMetrics, MetricsClient};
     use crate::error::MetricsClientError;
-    use chrono::{DateTime, NaiveDateTime, NaiveTime, TimeZone, Utc};
     use rusoto_cloudwatch::{CloudWatchClient, Datapoint};
     use rusoto_core::Region;
     use rusoto_mock::{
         MockCredentialsProvider, MockRequestDispatcher, MockResponseReader, ReadMockResponse,
     };
-    use std::convert::TryFrom;
-    use std::str::FromStr;
 
-    #[tokio::test]
-    async fn test_try_from() {
-        let beginning_of_month = chrono::NaiveDate::from_ymd(2020, 12, 1).and_hms(0, 0, 0);
-        let datetime = DateTime::<Utc>::from_str("2020-12-01T15:00:00.0+00:00").unwrap();
-
-        let time_range = TimeRange::try_from(datetime);
-        assert_eq!(
-            time_range.unwrap(),
-            TimeRange {
-                start: Utc::from_utc_datetime(
-                    &Utc {},
-                    &chrono::NaiveDate::from_ymd(2020, 11, 30).and_hms(15, 0, 0),
-                ),
-                end: Utc::from_utc_datetime(
-                    &Utc {},
-                    &chrono::NaiveDate::from_ymd(2020, 12, 31).and_hms(14, 59, 59),
-                ),
-            }
-        );
-    }
 
     #[tokio::test]
     async fn test_aggregate_metrics() {
