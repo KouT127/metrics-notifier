@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 use chrono::{DateTime, Utc, FixedOffset, TimeZone, Datelike, NaiveDate};
-use crate::error::MetricsClientError;
+use crate::error::MetricsNotifierError;
 
 #[derive(Debug, PartialEq)]
 pub struct TimeRange {
@@ -9,7 +9,7 @@ pub struct TimeRange {
 }
 
 impl TryFrom<DateTime<Utc>> for TimeRange {
-    type Error = MetricsClientError;
+    type Error = MetricsNotifierError;
 
     fn try_from(date_time: DateTime<Utc>) -> Result<Self, Self::Error> {
         let tokyo = FixedOffset::east(9 * 3600);
@@ -19,7 +19,7 @@ impl TryFrom<DateTime<Utc>> for TimeRange {
                 &chrono::NaiveDate::from_ymd(now.year(), now.month(), 1).and_hms(0, 0, 0),
             )
             .single()
-            .ok_or_else(|| MetricsClientError::NoneValue)?;
+            .ok_or_else(|| MetricsNotifierError::NoneValue)?;
 
         let end = tokyo
             .from_local_datetime(
@@ -31,7 +31,7 @@ impl TryFrom<DateTime<Utc>> for TimeRange {
                     .and_hms(23, 59, 59),
             )
             .single()
-            .ok_or_else(|| MetricsClientError::NoneValue)?;
+            .ok_or_else(|| MetricsNotifierError::NoneValue)?;
 
         Ok(TimeRange {
             start: start.with_timezone(&Utc),

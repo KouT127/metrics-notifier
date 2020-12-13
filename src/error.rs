@@ -7,43 +7,43 @@ use std::fmt::{Debug, Display, Formatter};
 use std::num::TryFromIntError;
 
 #[derive(Debug, PartialEq)]
-pub enum MetricsClientError {
+pub enum MetricsNotifierError {
     NoneValue,
     ToPrimitive,
     TryFromIntError,
     GetMetricsError(RusotoError<GetMetricStatisticsError>),
 }
 
-impl Display for MetricsClientError {
+impl Display for MetricsNotifierError {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match *self {
-            MetricsClientError::NoneValue => write!(f, "Value is None"),
-            MetricsClientError::ToPrimitive => {
+            MetricsNotifierError::NoneValue => write!(f, "Value is None"),
+            MetricsNotifierError::ToPrimitive => {
                 write!(f, "Failed to convert bigDecimal to primitive")
             }
-            MetricsClientError::TryFromIntError => write!(f, "Failed to convert int"),
-            MetricsClientError::GetMetricsError(ref error) => std::fmt::Display::fmt(error, f),
+            MetricsNotifierError::TryFromIntError => write!(f, "Failed to convert int"),
+            MetricsNotifierError::GetMetricsError(ref error) => std::fmt::Display::fmt(error, f),
         }
     }
 }
 
-impl Error for MetricsClientError {
+impl Error for MetricsNotifierError {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match *self {
-            MetricsClientError::GetMetricsError(ref error) => Some(error),
+            MetricsNotifierError::GetMetricsError(ref error) => Some(error),
             _ => None,
         }
     }
 }
 
-impl From<TryFromIntError> for MetricsClientError {
-    fn from(_: TryFromIntError) -> MetricsClientError {
-        MetricsClientError::TryFromIntError
+impl From<TryFromIntError> for MetricsNotifierError {
+    fn from(_: TryFromIntError) -> MetricsNotifierError {
+        MetricsNotifierError::TryFromIntError
     }
 }
 
-impl From<RusotoError<GetMetricStatisticsError>> for MetricsClientError {
-    fn from(e: RusotoError<GetMetricStatisticsError>) -> MetricsClientError {
-        MetricsClientError::GetMetricsError(e)
+impl From<RusotoError<GetMetricStatisticsError>> for MetricsNotifierError {
+    fn from(e: RusotoError<GetMetricStatisticsError>) -> MetricsNotifierError {
+        MetricsNotifierError::GetMetricsError(e)
     }
 }

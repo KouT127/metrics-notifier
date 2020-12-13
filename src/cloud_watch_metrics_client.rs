@@ -1,4 +1,4 @@
-use crate::error::MetricsClientError;
+use crate::error::MetricsNotifierError;
 use async_trait::async_trait;
 
 use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
@@ -17,12 +17,12 @@ pub struct CloudWatchMetricsClient {
 
 #[async_trait]
 pub trait Aggregate {
-    async fn aggregate_metrics(&self, time_range: &TimeRange) -> Result<AggregatedMetrics, MetricsClientError>;
+    async fn aggregate_metrics(&self, time_range: &TimeRange) -> Result<AggregatedMetrics, MetricsNotifierError>;
 }
 
 #[async_trait]
 impl Aggregate for CloudWatchMetricsClient {
-    async fn aggregate_metrics(&self, time_range: &TimeRange) -> Result<AggregatedMetrics, MetricsClientError> {
+    async fn aggregate_metrics(&self, time_range: &TimeRange) -> Result<AggregatedMetrics, MetricsNotifierError> {
         let metrics = self
             .client
             .get_metric_statistics(GetMetricStatisticsInput {
@@ -52,7 +52,7 @@ impl CloudWatchMetricsClient {
     fn aggregate_data_points(
         &self,
         data_points: Option<Vec<Datapoint>>,
-    ) -> Result<AggregatedMetrics, MetricsClientError> {
+    ) -> Result<AggregatedMetrics, MetricsNotifierError> {
         let data_points = data_points.map_or(vec![], |points| points);
         if data_points.is_empty() {
             return Ok(AggregatedMetrics::default());
@@ -68,17 +68,17 @@ impl CloudWatchMetricsClient {
                 .map(|average| {
                     BigDecimal::from_f64(average).map_or(BigDecimal::from(0), |average| average)
                 })
-                .ok_or(MetricsClientError::NoneValue)?;
+                .ok_or(MetricsNotifierError::NoneValue)?;
             total = total.add(average);
 
-            minimum = minimum.min(data_point.minimum.ok_or(MetricsClientError::NoneValue)?);
-            maximum = maximum.max(data_point.maximum.ok_or(MetricsClientError::NoneValue)?);
+            minimum = minimum.min(data_point.minimum.ok_or(MetricsNotifierError::NoneValue)?);
+            maximum = maximum.max(data_point.maximum.ok_or(MetricsNotifierError::NoneValue)?);
         }
 
         let decimal_average = total.div(count);
         let average = decimal_average
             .to_f64()
-            .ok_or(MetricsClientError::ToPrimitive)?;
+            .ok_or(MetricsNotifierError::ToPrimitive)?;
         Ok(AggregatedMetrics {
             average,
             maximum,
@@ -90,7 +90,7 @@ impl CloudWatchMetricsClient {
 #[cfg(test)]
 mod tests {
     use crate::cloud_watch_metrics_client::{Aggregate, AggregatedMetrics, CloudWatchMetricsClient};
-    use crate::error::MetricsClientError;
+    use crate::error::MetricsNotifierError;
     use rusoto_cloudwatch::{CloudWatchClient, Datapoint};
     use rusoto_core::Region;
     use rusoto_mock::{
@@ -229,6 +229,6 @@ mod tests {
             timestamp: None,
             unit: None,
         }]));
-        assert_eq!(result.err().unwrap(), MetricsClientError::NoneValue)
+        assert_eq!(result.err().unwrap(), MetricsNotifierError::NoneValue)
     }
 }

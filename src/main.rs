@@ -2,6 +2,7 @@ mod cloud_watch_metrics_client;
 mod error;
 mod time_range;
 mod metric;
+mod ec2_instance_client;
 
 use lambda::{handler_fn, Context};
 
