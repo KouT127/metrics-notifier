@@ -5,6 +5,7 @@ use rusoto_core::RusotoError;
 use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
 use std::num::TryFromIntError;
+use rusoto_ec2::DescribeInstancesError;
 
 #[derive(Debug, PartialEq)]
 pub enum MetricsNotifierError {
@@ -12,6 +13,7 @@ pub enum MetricsNotifierError {
     ToPrimitive,
     TryFromIntError,
     GetMetricsError(RusotoError<GetMetricStatisticsError>),
+    DescribeInstancesError(RusotoError<DescribeInstancesError>),
 }
 
 impl Display for MetricsNotifierError {
@@ -23,6 +25,7 @@ impl Display for MetricsNotifierError {
             }
             MetricsNotifierError::TryFromIntError => write!(f, "Failed to convert int"),
             MetricsNotifierError::GetMetricsError(ref error) => std::fmt::Display::fmt(error, f),
+            MetricsNotifierError::DescribeInstancesError(ref error) => std::fmt::Display::fmt(error, f),
         }
     }
 }
@@ -45,5 +48,11 @@ impl From<TryFromIntError> for MetricsNotifierError {
 impl From<RusotoError<GetMetricStatisticsError>> for MetricsNotifierError {
     fn from(e: RusotoError<GetMetricStatisticsError>) -> MetricsNotifierError {
         MetricsNotifierError::GetMetricsError(e)
+    }
+}
+
+impl From<RusotoError<DescribeInstancesError>> for MetricsNotifierError {
+    fn from(e: RusotoError<DescribeInstancesError>) -> MetricsNotifierError {
+        MetricsNotifierError::DescribeInstancesError(e)
     }
 }
